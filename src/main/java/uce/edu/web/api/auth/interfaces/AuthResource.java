@@ -4,38 +4,52 @@ import java.time.Instant;
 import java.util.Set;
 
 import io.smallrye.jwt.build.Jwt;
-import jakarta.ws.rs.DefaultValue;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
+import uce.edu.web.api.auth.application.UsuarioService;
+import uce.edu.web.api.auth.application.representation.UsuarioRepresentation;
 
+@Path("/auth")
 public class AuthResource {
+
+    @Inject
+    private UsuarioService usuarioService;
+
     @GET
     @Path("/token")
     public TokenResponse token(
             @QueryParam("user") String user,
             @QueryParam("password") String password) {
 
-        // Aqui es dond se compara el password y usuario contra la base
-        //TAREA
-        boolean ok=true;
-        String role="admin";
+        // Aqui es donde se compara el password y usuario contra la base
+        UsuarioRepresentation usuario = usuarioService.findByUsuario(user);
+        // TAREA
+        boolean ok = false;
+        String role = null;
+        
+        if (usuario != null && usuario.getPassword().equals(password)) {
+            ok = true;
+            role = usuario.getRole();
+        }
+
         if (ok) {
-        String issuer = "matricula-auth";
-        long ttl = 3600;
+            String issuer = "matricula-auth";
+            long ttl = 3600;
 
-        Instant now = Instant.now();
-        Instant exp = now.plusSeconds(ttl);
+            Instant now = Instant.now();
+            Instant exp = now.plusSeconds(ttl);
 
-        String jwt = Jwt.issuer(issuer)
-                .subject(user)
-                .groups(Set.of(role)) // roles: user / admin
-                .issuedAt(now)
-                .expiresAt(exp)
-                .sign();
+            String jwt = Jwt.issuer(issuer)
+                    .subject(user)
+                    .groups(Set.of(role)) // roles: user / admin
+                    .issuedAt(now)
+                    .expiresAt(exp)
+                    .sign();
 
-        return new TokenResponse(jwt, exp.getEpochSecond(), role);
-         } else {
+            return new TokenResponse(jwt, exp.getEpochSecond(), role);
+        } else {
             return null;
         }
     }
